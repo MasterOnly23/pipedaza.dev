@@ -117,6 +117,8 @@ async function startLoading(): Promise<void> {
   if (mode !== "consent" || startLoadingInFlight) return;
   startLoadingInFlight = true;
   view.consentAccept.disabled = true;
+  const sequence = ++loadSequence;
+  cancelRequested = false;
   try {
     const adapter = await requestAdapter();
     if (!adapter) {
@@ -124,8 +126,6 @@ async function startLoading(): Promise<void> {
       return;
     }
 
-    const sequence = ++loadSequence;
-    cancelRequested = false;
     setChatMode("loading");
     setStatus(view, "Preparando la IA local…");
     resetProgress(view);
