@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { lstat, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, readdir, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
@@ -100,21 +100,7 @@ const cacheVersion = createHash("sha256")
   .update(`${mainBundle}\n${cssBundle}\n${workerBundle}`)
   .digest("hex")
   .slice(0, 12);
-const indexPath = path.resolve(repositoryRoot, "static-landing", "index.html");
-const indexSource = await readFile(indexPath, "utf8");
-const cssReference = /href="\/chat\/portfolio-chat\.css(?:\?[^"]*)?"/gu;
-const jsReference = /src="\/chat\/portfolio-chat\.js(?:\?[^"]*)?"/gu;
-if ((indexSource.match(cssReference) ?? []).length !== 1) {
-  throw new Error("Expected exactly one chatbot CSS reference in static-landing/index.html");
-}
-if ((indexSource.match(jsReference) ?? []).length !== 1) {
-  throw new Error("Expected exactly one chatbot JS reference in static-landing/index.html");
-}
-const versionedIndex = indexSource
-  .replace(cssReference, `href="/chat/portfolio-chat.css?v=${cacheVersion}"`)
-  .replace(jsReference, `src="/chat/portfolio-chat.js?v=${cacheVersion}"`);
-await writeFile(indexPath, versionedIndex, "utf8");
 
 console.log(
-  `Portfolio chat built in ${path.relative(repositoryRoot, outputDirectory)} (cache ${cacheVersion})`,
+  `Portfolio chat built in ${path.relative(repositoryRoot, outputDirectory)} (cache ${cacheVersion}; update static-landing/index.html references manually)`,
 );
