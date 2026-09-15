@@ -169,11 +169,13 @@ for (const pattern of prohibitedKnowledgePatterns) {
   assert.doesNotMatch(knowledgeText, pattern, `Knowledge contains a prohibited field: ${pattern}`);
 }
 const renderSource = await read("features/portfolio-chat/render.ts");
+const chatStyles = await read("features/portfolio-chat/styles.css");
 assert.match(renderSource, /portfolio-chat-contact-links/u);
 assert.match(renderSource, /allowlistedLink\("github"/u);
 assert.match(renderSource, /allowlistedLink\("email"/u);
 assert.match(renderSource, /body\.textContent\s*=\s*text/u);
 assert.doesNotMatch(renderSource, /body\.innerHTML\s*=/u, "Variable chat output must not use innerHTML");
+assert.match(chatStyles, /#portfolio-chat-root\[data-open="true"\]\s+\.portfolio-chat-launcher/u);
 const generatedFiles = await readdir(chatRoot, { recursive: true });
 const generatedJs = await Promise.all(
   generatedFiles
