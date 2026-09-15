@@ -68,7 +68,20 @@ const webllmConfigSource = await readFile(
   path.join(repositoryRoot, "node_modules", "@mlc-ai", "web-llm", "lib", "index.js"),
   "utf8",
 );
-assert.match(webllmConfigSource, new RegExp(`model_id:\\s*["']${modelId}["']`, "u"));
+const prebuiltConfigStart = webllmConfigSource.indexOf("const prebuiltAppConfig =");
+const modelListStart = webllmConfigSource.indexOf("model_list:", prebuiltConfigStart);
+const prebuiltConfigEnd = webllmConfigSource.indexOf("\n};", modelListStart);
+assert.ok(prebuiltConfigStart >= 0, "WebLLM must expose prebuiltAppConfig metadata");
+assert.ok(modelListStart > prebuiltConfigStart, "prebuiltAppConfig must expose model_list");
+assert.ok(prebuiltConfigEnd > modelListStart, "prebuiltAppConfig.model_list must be closed");
+const prebuiltModelList = webllmConfigSource.slice(modelListStart, prebuiltConfigEnd);
+assert.match(
+  prebuiltModelList,
+  new RegExp(`model_id:\\s*["']${modelId}["']`, "u"),
+  "Pinned model must be present in prebuiltAppConfig.model_list",
+);
+assert.match(prebuiltModelList, /model:\s*["']https:\/\/huggingface\.co\/mlc-ai\//u);
+assert.match(prebuiltModelList, /model_lib:\s*modelLibURLPrefix/u);
 
 const sourceFiles = [];
 for (const file of await readdir(featureRoot, { recursive: true })) {
@@ -180,6 +193,14 @@ const renderSource = await read("features/portfolio-chat/render.ts");
 const chatStyles = await read("features/portfolio-chat/styles.css");
 const mainSource = await read("features/portfolio-chat/main.ts");
 const engineSource = await read("features/portfolio-chat/engine.ts");
+assert.deepEqual(
+  [...renderSource.matchAll(/data-quick-question="([^"]+)"/gu)].map((match) => match[1]),
+  ["¿Qué construye Juan Felipe?", "Cuéntame sobre PartyUp", "¿Qué es ZentraStock?"],
+  "The UI must expose exactly the three documented quick questions",
+);
+assert.match(renderSource, /role="dialog" aria-modal="false"/u);
+assert.match(renderSource, /aria-live="polite"/u);
+assert.match(renderSource, /<progress[^>]*max="1"/u);
 assert.match(renderSource, /portfolio-chat-contact-links/u);
 assert.match(renderSource, /allowlistedLink\("github"/u);
 assert.match(renderSource, /allowlistedLink\("email"/u);
@@ -196,7 +217,12 @@ assert.match(
   /\.portfolio-chat-contact-links a\{[^}]*min-height:2\.75rem/u,
   "Contact links must keep a 44px touch target",
 );
+assert.match(chatStyles, /visibility:hidden/u, "The hidden launcher must not remain keyboard-focusable");
+assert.match(chatStyles, /max-height:min\(78dvh,680px\)/u);
+assert.match(chatStyles, /padding-bottom:max\(16px,env\(safe-area-inset-bottom\)\)/u);
+assert.match(chatStyles, /@media\(prefers-reduced-motion:reduce\)/u);
 assert.match(mainSource, /createLocalChatEngine\(getChatAssetVersion\(\)\)/u);
+assert.match(renderSource, /setAttribute\("aria-busy",\s*String\(loading\s*\|\|\s*generating\)\)/u);
 assert.match(
   mainSource,
   /const quickResponse = findQuickResponse\(validation\.value\);[\s\S]*?quickResponse\.answer[\s\S]*?quickResponse\.links[\s\S]*?return;/u,
