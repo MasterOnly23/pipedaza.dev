@@ -36,6 +36,7 @@ let loadSequence = 0;
 let cancelRequested = false;
 let generationSequence = 0;
 let generationInFlight = false;
+let generationOwner = 0;
 let startLoadingInFlight = false;
 let opener: HTMLElement = view.launcher;
 
@@ -211,6 +212,7 @@ async function releaseModel(): Promise<void> {
   loadSequence += 1;
   cancelRequested = true;
   await disposeEngine();
+  generationOwner += 1;
   generationInFlight = false;
   history = [];
   clearMessages(view);
@@ -242,6 +244,7 @@ async function submitQuestion(): Promise<void> {
   const safeQuestion = sanitizeQuestionForModel(validation.value, topics);
   const responseMessage = appendMessage(view, "assistant", "Generando respuesta local…");
   const sequence = ++generationSequence;
+  const owner = ++generationOwner;
   generationInFlight = true;
   setChatMode("generating");
   setStatus(
@@ -285,7 +288,7 @@ async function submitQuestion(): Promise<void> {
     setChatMode("ready");
     setStatus(view, "La generación falló; el modelo sigue disponible para reintentar.");
   } finally {
-    generationInFlight = false;
+    if (owner === generationOwner) generationInFlight = false;
   }
 }
 

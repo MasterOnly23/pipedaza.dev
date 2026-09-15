@@ -177,7 +177,7 @@ function hasUnsupportedClaim(answer: string, topics: KnowledgeTopic[]): boolean 
 
 function removeRepeatedFragments(answer: string): string {
   const fragments = answer
-    .split(/\n+|(?<=[.!?])\s{2,}/u)
+    .split(/\n+|(?<=[.!?])\s+/u)
     .map((fragment) => fragment.trim())
     .filter(Boolean);
   const seen = new Set<string>();
