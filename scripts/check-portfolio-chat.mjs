@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { strict as assert } from "node:assert";
 import { gzipSync } from "node:zlib";
 import { readFile, readdir, stat } from "node:fs/promises";
@@ -46,8 +47,11 @@ for (const artifact of [
 }
 
 const index = await read("static-landing/index.html");
-assert.match(index, /<link[^>]+href="\/chat\/portfolio-chat\.css"/u);
-assert.match(index, /<script[^>]+type="module"[^>]+src="\/chat\/portfolio-chat\.js"/u);
+const cssReference = index.match(/href="\/chat\/portfolio-chat\.css\?v=([0-9a-f]{12})"/u);
+const jsReference = index.match(/src="\/chat\/portfolio-chat\.js\?v=([0-9a-f]{12})"/u);
+assert.ok(cssReference, "Chat CSS must have a content cache key in index.html");
+assert.ok(jsReference, "Chat JS must have a content cache key in index.html");
+assert.equal(cssReference[1], jsReference[1], "Chat CSS and JS must share the cache key");
 assert.doesNotMatch(index, /http:\/\//u, "Production index contains an http:// URL");
 
 const packageJson = JSON.parse(await read("package.json"));
@@ -183,6 +187,12 @@ const generatedJs = await Promise.all(
     .map(async (file) => ({ file, source: await readFile(path.join(chatRoot, file), "utf8") })),
 );
 const mainGenerated = generatedJs.find((entry) => entry.file === "portfolio-chat.js")?.source ?? "";
+const cssGenerated = await read("static-landing/chat/portfolio-chat.css");
+const expectedCacheVersion = createHash("sha256")
+  .update(`${mainGenerated}\n${cssGenerated}`)
+  .digest("hex")
+  .slice(0, 12);
+assert.equal(cssReference[1], expectedCacheVersion, "Chat references must match generated entry content");
 assert.doesNotMatch(mainGenerated, /Qwen2\.5|@mlc-ai\/web-llm|CreateWebWorkerMLCEngine/u);
 const deferredModelChunks = generatedJs.filter(
   (entry) => entry.file !== "portfolio-chat.js" && entry.file !== "portfolio-chat-worker.js" && /Qwen2\.5|@mlc-ai\/web-llm|CreateWebWorkerMLCEngine/u.test(entry.source),

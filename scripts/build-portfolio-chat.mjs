@@ -1,4 +1,5 @@
-import { lstat, mkdir, readFile, readdir, rm, stat } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { lstat, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
@@ -90,4 +91,26 @@ if (/Qwen2\.5|@mlc-ai\/web-llm|CreateWebWorkerMLCEngine/u.test(mainBundle)) {
   throw new Error("WebLLM was included in the critical chatbot entry bundle");
 }
 
-console.log(`Portfolio chat built in ${path.relative(repositoryRoot, outputDirectory)}`);
+const cssBundle = await readFile(path.join(outputDirectory, "portfolio-chat.css"), "utf8");
+const cacheVersion = createHash("sha256")
+  .update(`${mainBundle}\n${cssBundle}`)
+  .digest("hex")
+  .slice(0, 12);
+const indexPath = path.resolve(repositoryRoot, "static-landing", "index.html");
+const indexSource = await readFile(indexPath, "utf8");
+const cssReference = /href="\/chat\/portfolio-chat\.css(?:\?[^"]*)?"/gu;
+const jsReference = /src="\/chat\/portfolio-chat\.js(?:\?[^"]*)?"/gu;
+if ((indexSource.match(cssReference) ?? []).length !== 1) {
+  throw new Error("Expected exactly one chatbot CSS reference in static-landing/index.html");
+}
+if ((indexSource.match(jsReference) ?? []).length !== 1) {
+  throw new Error("Expected exactly one chatbot JS reference in static-landing/index.html");
+}
+const versionedIndex = indexSource
+  .replace(cssReference, `href="/chat/portfolio-chat.css?v=${cacheVersion}"`)
+  .replace(jsReference, `src="/chat/portfolio-chat.js?v=${cacheVersion}"`);
+await writeFile(indexPath, versionedIndex, "utf8");
+
+console.log(
+  `Portfolio chat built in ${path.relative(repositoryRoot, outputDirectory)} (cache ${cacheVersion})`,
+);
