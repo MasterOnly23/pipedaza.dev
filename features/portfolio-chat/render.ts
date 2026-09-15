@@ -51,6 +51,12 @@ function required<T extends Element>(root: QueryRoot, selector: string): T {
   return element;
 }
 
+function allowlistedLink(key: string, label: string): AllowedLink {
+  const url = allowedLinks.get(key);
+  if (!url) throw new Error(`Chat UI link missing from allowlist: ${key}`);
+  return { label, url };
+}
+
 export function createChatView(): ChatView {
   const root = document.createElement("div");
   root.id = "portfolio-chat-root";
@@ -98,6 +104,23 @@ export function createChatView(): ChatView {
       <div class="portfolio-chat-engine-actions" hidden><button class="portfolio-chat-stop" type="button" hidden>Detener</button><button class="portfolio-chat-release" type="button" hidden>Liberar IA</button></div>
     </section>`;
   document.body.appendChild(root);
+
+  const contact = document.createElement("div");
+  contact.className = "portfolio-chat-contact";
+  const contactLabel = document.createElement("span");
+  contactLabel.className = "portfolio-chat-contact-label";
+  contactLabel.textContent = "Contacto público";
+  contact.appendChild(contactLabel);
+  appendLinks(
+    contact,
+    [
+      allowlistedLink("github", "GitHub"),
+      allowlistedLink("email", "Email"),
+    ],
+    "portfolio-chat-contact-links",
+  );
+  const quick = root.querySelector<HTMLElement>(".portfolio-chat-quick");
+  quick?.parentElement?.insertBefore(contact, quick.nextSibling);
 
   return {
     root,
@@ -174,12 +197,16 @@ export function updateCharacterCount(view: ChatView): void {
   view.charCount.textContent = `${Array.from(view.input.value).length} / 280`;
 }
 
-function appendLinks(root: HTMLElement, links: AllowedLink[]): void {
+function appendLinks(
+  root: HTMLElement,
+  links: AllowedLink[],
+  className = "portfolio-chat-message-links",
+): void {
   const safeLinks = links.filter((link) => Array.from(allowedLinks.values()).includes(link.url));
   if (!safeLinks.length) return;
 
   const linksRoot = document.createElement("div");
-  linksRoot.className = "portfolio-chat-message-links";
+  linksRoot.className = className;
   for (const link of safeLinks) {
     const anchor = document.createElement("a");
     anchor.href = link.url;
