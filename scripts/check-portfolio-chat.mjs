@@ -118,6 +118,8 @@ assert.deepEqual(
   "Knowledge must contain only the six documented public topics",
 );
 assert.deepEqual(ids("¿Qué es PartyUp?"), ["partyup"]);
+assert.deepEqual(ids("Tell me about Juan Felipe"), ["profile"]);
+assert.deepEqual(ids("Juan Felipe Daza"), ["profile"]);
 assert.deepEqual(ids("¿Qué tecnologías utiliza?"), ["stack"]);
 assert.deepEqual(ids("¿Cómo contacto a Juan Felipe?"), ["contact"]);
 assert.deepEqual(ids("Compare PartyUp and ZentraStock"), ["partyup", "zentrastock"]);

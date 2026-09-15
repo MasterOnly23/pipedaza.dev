@@ -24,6 +24,10 @@ export const knowledge: KnowledgeTopic[] = [
   {
     id: "profile",
     keywords: [
+      "juan felipe daza",
+      "tell me about juan felipe",
+      "about juan felipe",
+      "sobre juan felipe",
       "quien",
       "who",
       "perfil",
