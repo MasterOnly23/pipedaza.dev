@@ -47,6 +47,5 @@ next-env.d.ts
 /work/
 /.playwright-cli/
 
-# Local handoff documents requested for the browser-side AI chatbot.
-# Keep these out of the repository history unless Pipe decides to publish them.
+# Local implementation handoffs; keep them outside repository history.
 /docs/local-browser-chatbot/
