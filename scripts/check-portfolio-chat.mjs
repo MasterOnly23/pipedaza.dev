@@ -182,6 +182,16 @@ assert.match(renderSource, /allowlistedLink\("email"/u);
 assert.match(renderSource, /body\.textContent\s*=\s*text/u);
 assert.doesNotMatch(renderSource, /body\.innerHTML\s*=/u, "Variable chat output must not use innerHTML");
 assert.match(chatStyles, /#portfolio-chat-root\[data-open="true"\]\s+\.portfolio-chat-launcher/u);
+assert.match(
+  chatStyles,
+  /\.portfolio-chat-message-links a\{[^}]*min-height:2\.75rem/u,
+  "Message links must keep a 44px touch target",
+);
+assert.match(
+  chatStyles,
+  /\.portfolio-chat-contact-links a\{[^}]*min-height:2\.75rem/u,
+  "Contact links must keep a 44px touch target",
+);
 assert.match(mainSource, /createLocalChatEngine\(getChatAssetVersion\(\)\)/u);
 assert.match(
   mainSource,
