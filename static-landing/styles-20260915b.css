@@ -14,3 +14,10 @@
 .image-mobile img{width:auto;height:88%;max-width:62%;object-fit:cover;object-position:top;border-radius:.75rem;transform:rotate(2deg);box-shadow:0 2rem 5rem rgba(0,0,0,.34)}
 .project-card:hover .image-mobile img{transform:rotate(0) scale(1.025)}
 @media(max-width:760px){.image-mobile img{height:92%;max-width:72%}.image-mobile::before{left:.8rem;bottom:.8rem}}
+
+/* Mobile cards size themselves from their content; metadata no longer floats over an empty panel. */
+@media(max-width:760px){
+  .project-card{min-height:0;grid-template-rows:clamp(20rem,70vw,28rem) auto}
+  .project-info,.project-reversed .project-info{justify-content:flex-start;padding-top:4.8rem;padding-bottom:2rem}
+  .project-info h3{margin-top:0}
+}
