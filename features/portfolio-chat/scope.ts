@@ -100,7 +100,7 @@ const INJECTION_PATTERNS = [
   /\b(mensaje|system)\s+(del\s+)?sistema\b/u,
   /\b(system\s+prompt|system\s+message|prompt\s+del\s+sistema)\b/u,
   /\b(revela|reveal|muestra|show|dime|tell me)\b.*\b(prompt|secreto|secret|clave|instructions|instrucciones)\b/u,
-  /\b(actua como|actúa como|pretend|roleplay|eres otra ia|be another ai)\b/u,
+  /\b(actua como|actúa como|act as|pretend|roleplay|eres otra ia|be another ai)\b/u,
   /\bjailbreak\b/u,
 ];
 
