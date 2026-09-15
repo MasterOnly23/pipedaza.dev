@@ -161,7 +161,7 @@ export function linksForTopics(topics: KnowledgeTopic[]): AllowedLink[] {
 const UNSUPPORTED_CLAIM_PATTERNS = [
   /\b(cliente|clientes|client|clients)\b/iu,
   /\b(años? de experiencia|years? of experience)\b/iu,
-  /\b(ubicad[oa]|vive|reside|location|located)\b/iu,
+  /\b(ubicad[oa]|ubicaci[oó]n|vive|reside|location|located)\b/iu,
   /\b(estudios|educacion|education|degree|universidad|university)\b/iu,
   /\b(disponibilidad|availability|freelance|tarifa|rate|precio|price|salario|salary)\b/iu,
   /\b(usuarios|users|ingresos|revenue|metricas|metrics|lanzamiento|launch date)\b/iu,

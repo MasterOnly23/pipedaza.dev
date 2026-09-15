@@ -134,6 +134,10 @@ assert.equal(findQuickResponse("¿Qué es Kustral Finanzas?"), null);
 assert.equal(postValidateAnswer("<b>PartyUp</b>", injectedTopics), "<b>PartyUp</b>");
 assert.doesNotMatch(postValidateAnswer("Visita https://inventado.example/", injectedTopics), /https?:\/\//iu);
 assert.equal(postValidateAnswer("Juan Felipe tiene 20 años de experiencia.", injectedTopics), "No tengo información pública suficiente sobre eso.");
+assert.equal(
+  postValidateAnswer("La ubicación de Juan Felipe es Bogotá.", injectedTopics),
+  "No tengo información pública suficiente sobre eso.",
+);
 assert.equal(postValidateAnswer(" ", injectedTopics), "No tengo información pública suficiente sobre eso.");
 
 const prompt = buildPromptMessages("¿Qué es PartyUp?", selectTopics("¿Qué es PartyUp?"), []);
