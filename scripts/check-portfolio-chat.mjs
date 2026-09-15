@@ -183,6 +183,11 @@ assert.match(renderSource, /body\.textContent\s*=\s*text/u);
 assert.doesNotMatch(renderSource, /body\.innerHTML\s*=/u, "Variable chat output must not use innerHTML");
 assert.match(chatStyles, /#portfolio-chat-root\[data-open="true"\]\s+\.portfolio-chat-launcher/u);
 assert.match(mainSource, /createLocalChatEngine\(getChatAssetVersion\(\)\)/u);
+assert.match(
+  mainSource,
+  /const quickResponse = findQuickResponse\(validation\.value\);[\s\S]*?quickResponse\.answer[\s\S]*?quickResponse\.links[\s\S]*?return;/u,
+  "Manual quick questions must bypass model generation",
+);
 assert.match(engineSource, /portfolio-chat-worker\.js/u);
 assert.match(engineSource, /searchParams\.set\("v"/u);
 const generatedFiles = await readdir(chatRoot, { recursive: true });

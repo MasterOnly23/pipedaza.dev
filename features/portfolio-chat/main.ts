@@ -244,6 +244,13 @@ async function submitQuestion(): Promise<void> {
   updateCharacterCount(view);
   appendMessage(view, "user", validation.value);
 
+  const quickResponse = findQuickResponse(validation.value);
+  if (quickResponse) {
+    appendMessage(view, "assistant", quickResponse.answer, quickResponse.links);
+    setStatus(view, "Respuesta rápida · no descargó el modelo.");
+    return;
+  }
+
   if (!topics.length) {
     appendMessage(view, "assistant", FALLBACK_ANSWER);
     setStatus(view, "Pregunta fuera del alcance público del asistente.");
