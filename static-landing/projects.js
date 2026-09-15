@@ -20,7 +20,8 @@ export const projects = [
     status: "En desarrollo",
     accent: "lime",
     index: "02",
-    visual: "partyup",
+    image: "/assets/partyup-create.jpg",
+    imageAlt: "Pantalla móvil de PartyUp para publicar una nueva party",
+    imageShape: "mobile",
   },
 ];
-

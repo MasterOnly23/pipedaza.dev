@@ -1,7 +1,7 @@
 import { projects } from "./projects.js";
 
 const visual = (project) => project.image
-  ? `<div class="project-visual image-visual"><img src="${project.image}" width="1280" height="720" alt="${project.imageAlt}" decoding="async"><span class="project-arrow" aria-hidden="true">↗</span></div>`
+  ? `<div class="project-visual image-visual image-${project.imageShape || "desktop"}"><img src="${project.image}" alt="${project.imageAlt}" decoding="async"><span class="project-arrow" aria-hidden="true">↗</span></div>`
   : `<div class="project-visual party-visual" aria-hidden="true">
       <div class="party-window"><div class="window-bar"><span></span><span></span><span></span></div>
         <div class="party-layout"><div class="party-copy"><small>FIND YOUR SQUAD</small><strong>Good games start with the right people.</strong><i></i></div>
@@ -38,4 +38,3 @@ if (reduceMotion || !("IntersectionObserver" in window)) {
   }, { threshold: 0.12 });
   document.querySelectorAll(".reveal").forEach((element) => observer.observe(element));
 }
-
