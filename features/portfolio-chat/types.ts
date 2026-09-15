@@ -15,8 +15,10 @@ export type KnowledgeTopic = {
   id: TopicId;
   keywords: string[];
   facts: string[];
+  factsEn?: string[];
   quickQuestions: string[];
   deterministicAnswer?: string;
+  deterministicAnswerEn?: string;
   links?: AllowedLink[];
 };
 

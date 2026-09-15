@@ -2,6 +2,8 @@ import "./styles.css";
 import { buildPromptMessages } from "./prompt";
 import {
   FALLBACK_ANSWER,
+  FALLBACK_ANSWER_EN,
+  detectQuestionLanguage,
   findQuickResponse,
   isInjectionLike,
   linksForTopics,
@@ -240,6 +242,7 @@ async function submitQuestion(): Promise<void> {
   }
 
   const topics = selectTopics(validation.value);
+  const language = detectQuestionLanguage(validation.value);
   view.input.value = "";
   updateCharacterCount(view);
   appendMessage(view, "user", validation.value);
@@ -252,7 +255,7 @@ async function submitQuestion(): Promise<void> {
   }
 
   if (!topics.length) {
-    appendMessage(view, "assistant", FALLBACK_ANSWER);
+    appendMessage(view, "assistant", language === "en" ? FALLBACK_ANSWER_EN : FALLBACK_ANSWER);
     setStatus(view, "Pregunta fuera del alcance público del asistente.");
     return;
   }
@@ -280,7 +283,7 @@ async function submitQuestion(): Promise<void> {
     }
     if (sequence !== generationSequence) return;
 
-    const answer = postValidateAnswer(generated, topics);
+    const answer = postValidateAnswer(generated, topics, language);
     updateMessage(responseMessage, answer, linksForTopics(topics));
     const nextHistory: ChatHistoryEntry[] = [
       ...history,

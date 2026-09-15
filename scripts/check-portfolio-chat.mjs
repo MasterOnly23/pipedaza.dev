@@ -103,6 +103,7 @@ const { knowledge, allowedLinks } = knowledgeModule;
 const { buildPromptMessages } = promptModule;
 const {
   findQuickResponse,
+  detectQuestionLanguage,
   isInjectionLike,
   normalizeQuestion,
   postValidateAnswer,
@@ -120,11 +121,16 @@ assert.deepEqual(
 assert.deepEqual(ids("¿Qué es PartyUp?"), ["partyup"]);
 assert.deepEqual(ids("Tell me about Juan Felipe"), ["profile"]);
 assert.deepEqual(ids("Juan Felipe Daza"), ["profile"]);
+assert.deepEqual(ids("What does Juan Felipe build?"), ["work"]);
+assert.deepEqual(ids("What kind of products does he develop?"), ["work"]);
+assert.deepEqual(ids("What does Juan Felipe do?"), ["work"]);
 assert.deepEqual(ids("¿Qué tecnologías utiliza?"), ["stack"]);
 assert.deepEqual(ids("¿Cómo contacto a Juan Felipe?"), ["contact"]);
 assert.deepEqual(ids("Compare PartyUp and ZentraStock"), ["partyup", "zentrastock"]);
 assert.deepEqual(normalizeQuestion("Tecnologías"), normalizeQuestion("Tecnologias"));
 assert.deepEqual(ids("¿Qué tecnologías utiliza?"), ids("Que tecnologias utiliza"));
+assert.equal(detectQuestionLanguage("Tell me about Juan Felipe"), "en");
+assert.equal(detectQuestionLanguage("¿Qué construye Juan Felipe?"), "es");
 assert.equal(ids("¿Cuál es la capital de Francia?").length, 0);
 assert.equal(ids("Escribe una función en Python").includes("stack"), false);
 assert.equal(validateQuestion("").ok, false);
@@ -161,7 +167,23 @@ assert.equal(
   postValidateAnswer("La ubicación de Juan Felipe es Bogotá.", injectedTopics),
   "No tengo información pública suficiente sobre eso.",
 );
+assert.equal(
+  postValidateAnswer(
+    "Juan Felipe Daza is a renowned Software Developer and Full Stack developer, known for his expertise in building useful systems and digital products.",
+    selectTopics("Tell me about Juan Felipe"),
+    "en",
+  ),
+  "Juan Felipe Daza is a Software Developer and Full Stack developer. His public work focuses on building useful systems and digital products.",
+);
+assert.equal(
+  postValidateAnswer("The private secret is available here.", injectedTopics, "en"),
+  "I don't have enough public information about that.",
+);
 assert.equal(postValidateAnswer(" ", injectedTopics), "No tengo información pública suficiente sobre eso.");
+assert.match(
+  postValidateAnswer("Hecho: PartyUp es un producto social para encontrar jugadores.", injectedTopics, "en"),
+  /^PartyUp is a social\/gaming product/u,
+);
 
 const prompt = buildPromptMessages("¿Qué es PartyUp?", selectTopics("¿Qué es PartyUp?"), []);
 assert.equal(prompt[0].role, "system");
@@ -176,7 +198,11 @@ const bilingualPrompt = buildPromptMessages(
 );
 assert.match(bilingualPrompt[0].content, /PartyUp/u);
 assert.match(bilingualPrompt[0].content, /ZentraStock/u);
-assert.match(bilingualPrompt[0].content, /idioma de la pregunta/u);
+assert.match(bilingualPrompt[0].content, /language of the question|idioma de la pregunta/u);
+const englishPrompt = buildPromptMessages("Tell me about Juan Felipe", selectTopics("Tell me about Juan Felipe"), []);
+assert.match(englishPrompt[0].content, /You are the brief assistant/u);
+assert.match(englishPrompt[0].content, /His public work focuses/u);
+assert.match(englishPrompt[0].content, /FACTS:/u);
 
 for (const [key, url] of allowedLinks) {
   assert.equal(/^https:\/\//u.test(url) || /^mailto:/u.test(url), true, `Unsafe allowlisted URL: ${key}`);

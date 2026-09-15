@@ -3,6 +3,13 @@ import type { AllowedLink, KnowledgeTopic } from "./types";
 
 export const FALLBACK_ANSWER =
   "Solo puedo responder preguntas sobre Juan Felipe, sus proyectos, su stack y sus formas públicas de contacto.";
+export const FALLBACK_ANSWER_EN =
+  "I can only answer questions about Juan Felipe, his projects, his stack, and his public contact options.";
+
+const INSUFFICIENT_INFORMATION_ANSWER = "No tengo información pública suficiente sobre eso.";
+const INSUFFICIENT_INFORMATION_ANSWER_EN = "I don't have enough public information about that.";
+
+export type AnswerLanguage = "es" | "en";
 
 const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]/g;
 const MAX_QUESTION_LENGTH = 280;
@@ -15,6 +22,70 @@ const TOPIC_LABELS: Record<KnowledgeTopic["id"], string> = {
   contact: "contacto",
 };
 
+const TOPIC_LABELS_EN: Record<KnowledgeTopic["id"], string> = {
+  profile: "profile",
+  work: "work",
+  stack: "stack",
+  partyup: "PartyUp",
+  zentrastock: "ZentraStock",
+  contact: "contact",
+};
+
+const ENGLISH_LANGUAGE_MARKERS = [
+  "the",
+  "what",
+  "who",
+  "how",
+  "tell",
+  "about",
+  "does",
+  "do",
+  "build",
+  "develop",
+  "use",
+  "technologies",
+  "contact",
+  "compare",
+  "and",
+  "or",
+  "is",
+  "are",
+  "products",
+  "systems",
+];
+
+const SPANISH_LANGUAGE_MARKERS = [
+  "que",
+  "quien",
+  "como",
+  "cuentame",
+  "sobre",
+  "contacto",
+  "construye",
+  "desarrolla",
+  "tecnologias",
+  "utiliza",
+  "es",
+  "son",
+  "el",
+  "la",
+  "los",
+  "las",
+  "un",
+  "una",
+  "de",
+  "del",
+  "en",
+  "con",
+  "para",
+  "por",
+  "y",
+  "o",
+  "trabajo",
+  "productos",
+  "sistemas",
+];
+
 export function normalizeQuestion(input: string): string {
   return String(input ?? "")
     .replace(CONTROL_CHARACTERS, " ")
@@ -23,6 +94,20 @@ export function normalizeQuestion(input: string): string {
     .toLocaleLowerCase("es")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function scoreLanguage(normalized: string, markers: string[]): number {
+  return markers.reduce(
+    (score, marker) => score + (containsCompleteAlias(normalized, marker) ? 1 : 0),
+    0,
+  );
+}
+
+export function detectQuestionLanguage(input: string): AnswerLanguage {
+  const normalized = normalizeQuestion(input);
+  return scoreLanguage(normalized, ENGLISH_LANGUAGE_MARKERS) > scoreLanguage(normalized, SPANISH_LANGUAGE_MARKERS)
+    ? "en"
+    : "es";
 }
 
 export function validateQuestion(
@@ -112,14 +197,21 @@ export function isInjectionLike(question: string): boolean {
 export function sanitizeQuestionForModel(
   question: string,
   topics: KnowledgeTopic[],
+  language: AnswerLanguage = detectQuestionLanguage(question),
 ): string {
-  const labels = topics.map((topic) => TOPIC_LABELS[topic.id]).join(" y ");
+  const labels = topics
+    .map((topic) => (language === "en" ? TOPIC_LABELS_EN[topic.id] : TOPIC_LABELS[topic.id]))
+    .join(language === "en" ? " and " : " y ");
   if (isInjectionLike(question)) {
-    return `El visitante pregunta por los temas públicos: ${labels}. Responde únicamente con los hechos proporcionados sobre esos temas.`;
+    return language === "en"
+      ? `The visitor is asking about these public topics: ${labels}. Answer only with the provided facts about them.`
+      : `El visitante pregunta por los temas públicos: ${labels}. Responde únicamente con los hechos proporcionados sobre esos temas.`;
   }
 
   const validated = validateQuestion(question);
-  return `Pregunta del visitante: ${validated.ok ? validated.value : ""}`;
+  return language === "en"
+    ? `Visitor question: ${validated.ok ? validated.value : ""}`
+    : `Pregunta del visitante: ${validated.ok ? validated.value : ""}`;
 }
 
 export function findQuickResponse(
@@ -166,6 +258,8 @@ const UNSUPPORTED_CLAIM_PATTERNS = [
   /\b(disponibilidad|availability|freelance|tarifa|rate|precio|price|salario|salary)\b/iu,
   /\b(usuarios|users|ingresos|revenue|metricas|metrics|lanzamiento|launch date)\b/iu,
   /\b(system prompt|system message|prompt del sistema|secreto|secret)\b/iu,
+  /\b(renowned|famous|well-known|known for|expert|expertise|speciali[sz]es?|specialist|professional experience)\b/iu,
+  /\b(reconocid[oa]s?|famos[oa]s?|conocid[oa] por|expert[oa]s?|especialista|experiencia profesional)\b/iu,
 ];
 
 function hasUnsupportedClaim(answer: string, topics: KnowledgeTopic[]): boolean {
@@ -173,6 +267,25 @@ function hasUnsupportedClaim(answer: string, topics: KnowledgeTopic[]): boolean 
   return UNSUPPORTED_CLAIM_PATTERNS.some(
     (pattern) => pattern.test(answer) && !pattern.test(knownFacts),
   );
+}
+
+function sharesKnownFactSignal(answer: string, topics: KnowledgeTopic[]): boolean {
+  const knownWords = new Set(
+    normalizeQuestion(topics.flatMap((topic) => topic.facts).join(" "))
+      .split(" ")
+      .filter((word) => word.length >= 4),
+  );
+  const answerWords = new Set(
+    normalizeQuestion(answer)
+      .split(" ")
+      .filter((word) => word.length >= 4),
+  );
+  let overlap = 0;
+  for (const word of answerWords) {
+    if (knownWords.has(word)) overlap += 1;
+    if (overlap >= 2) return true;
+  }
+  return false;
 }
 
 function removeRepeatedFragments(answer: string): string {
@@ -203,9 +316,33 @@ function limitAnswer(answer: string): string {
   return `${readable.trimEnd()}…`;
 }
 
+function fallbackAnswerForLanguage(
+  topics: KnowledgeTopic[],
+  language: AnswerLanguage,
+): string {
+  const answers = topics
+    .map((topic) =>
+      language === "en"
+        ? topic.deterministicAnswerEn ?? topic.factsEn?.join(" ")
+        : topic.deterministicAnswer ?? topic.facts.join(" "),
+    )
+    .filter((answer): answer is string => Boolean(answer));
+  return limitAnswer(answers.join(" "));
+}
+
+function hasLanguageMismatch(answer: string, language: AnswerLanguage): boolean {
+  const normalized = normalizeQuestion(answer);
+  const expectedMarkers = language === "en" ? ENGLISH_LANGUAGE_MARKERS : SPANISH_LANGUAGE_MARKERS;
+  const otherMarkers = language === "en" ? SPANISH_LANGUAGE_MARKERS : ENGLISH_LANGUAGE_MARKERS;
+  const expectedScore = scoreLanguage(normalized, expectedMarkers);
+  const otherScore = scoreLanguage(normalized, otherMarkers);
+  return otherScore >= 2 && otherScore > expectedScore;
+}
+
 export function postValidateAnswer(
   rawAnswer: string,
   topics: KnowledgeTopic[],
+  language: AnswerLanguage = "es",
 ): string {
   const answer = String(rawAnswer ?? "")
     .replace(CONTROL_CHARACTERS, " ")
@@ -213,8 +350,23 @@ export function postValidateAnswer(
     .trim();
   const cleaned = removeRepeatedFragments(answer);
 
-  if (!cleaned || hasUnsupportedClaim(cleaned, topics)) {
-    return "No tengo información pública suficiente sobre eso.";
+  if (!cleaned) {
+    return language === "en"
+      ? INSUFFICIENT_INFORMATION_ANSWER_EN
+      : INSUFFICIENT_INFORMATION_ANSWER;
+  }
+
+  if (hasUnsupportedClaim(cleaned, topics)) {
+    const groundedFallback = sharesKnownFactSignal(cleaned, topics)
+      ? fallbackAnswerForLanguage(topics, language)
+      : "";
+    return groundedFallback ||
+      (language === "en" ? INSUFFICIENT_INFORMATION_ANSWER_EN : INSUFFICIENT_INFORMATION_ANSWER);
+  }
+
+  if (hasLanguageMismatch(cleaned, language)) {
+    return fallbackAnswerForLanguage(topics, language) ||
+      (language === "en" ? INSUFFICIENT_INFORMATION_ANSWER_EN : INSUFFICIENT_INFORMATION_ANSWER);
   }
 
   return limitAnswer(cleaned);
