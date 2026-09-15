@@ -1,4 +1,4 @@
-import { projects } from "./projects.js";
+import { projects } from "./projects-20260915.js";
 
 const visual = (project) => project.image
   ? `<div class="project-visual image-visual image-${project.imageShape || "desktop"}"><img src="${project.image}" alt="${project.imageAlt}" decoding="async"><span class="project-arrow" aria-hidden="true">↗</span></div>`
