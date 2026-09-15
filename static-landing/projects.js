@@ -1,0 +1,26 @@
+export const projects = [
+  {
+    name: "ZentraStock",
+    eyebrow: "Inventory / Operations",
+    description: "Control de inventario, lotes, vencimientos y movimientos para equipos que necesitan tomar decisiones con información clara.",
+    stack: ["React", "Django", "PostgreSQL"],
+    url: "https://zentrastock.pipedaza.dev/",
+    status: "Demo pública",
+    accent: "blue",
+    index: "01",
+    image: "/assets/zentrastock-dashboard.png",
+    imageAlt: "Dashboard de ZentraStock con indicadores de inventario",
+  },
+  {
+    name: "PartyUp",
+    eyebrow: "Social product / Gaming",
+    description: "Una plataforma para encontrar personas compatibles con las que jugar, crear grupos y organizar partidas sin el ruido de una red social genérica.",
+    stack: ["React", "Django", "WebSockets"],
+    url: "https://partyup.pipedaza.dev/",
+    status: "En desarrollo",
+    accent: "lime",
+    index: "02",
+    visual: "partyup",
+  },
+];
+
