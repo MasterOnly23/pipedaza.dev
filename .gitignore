@@ -36,6 +36,7 @@ yarn-error.log*
 
 # typescript
 next-env.d.ts
+/tsconfig.tsbuildinfo
 /dist/
 /.wrangler/
 # Checkout-local execution profile and tool state; never publish them.
@@ -45,3 +46,7 @@ next-env.d.ts
 /outputs/
 /work/
 /.playwright-cli/
+
+# Local handoff documents requested for the browser-side AI chatbot.
+# Keep these out of the repository history unless Pipe decides to publish them.
+/docs/local-browser-chatbot/
