@@ -92,8 +92,12 @@ if (/Qwen2\.5|@mlc-ai\/web-llm|CreateWebWorkerMLCEngine/u.test(mainBundle)) {
 }
 
 const cssBundle = await readFile(path.join(outputDirectory, "portfolio-chat.css"), "utf8");
+const workerBundle = await readFile(
+  path.join(outputDirectory, "portfolio-chat-worker.js"),
+  "utf8",
+);
 const cacheVersion = createHash("sha256")
-  .update(`${mainBundle}\n${cssBundle}`)
+  .update(`${mainBundle}\n${cssBundle}\n${workerBundle}`)
   .digest("hex")
   .slice(0, 12);
 const indexPath = path.resolve(repositoryRoot, "static-landing", "index.html");

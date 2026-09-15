@@ -174,12 +174,17 @@ for (const pattern of prohibitedKnowledgePatterns) {
 }
 const renderSource = await read("features/portfolio-chat/render.ts");
 const chatStyles = await read("features/portfolio-chat/styles.css");
+const mainSource = await read("features/portfolio-chat/main.ts");
+const engineSource = await read("features/portfolio-chat/engine.ts");
 assert.match(renderSource, /portfolio-chat-contact-links/u);
 assert.match(renderSource, /allowlistedLink\("github"/u);
 assert.match(renderSource, /allowlistedLink\("email"/u);
 assert.match(renderSource, /body\.textContent\s*=\s*text/u);
 assert.doesNotMatch(renderSource, /body\.innerHTML\s*=/u, "Variable chat output must not use innerHTML");
 assert.match(chatStyles, /#portfolio-chat-root\[data-open="true"\]\s+\.portfolio-chat-launcher/u);
+assert.match(mainSource, /createLocalChatEngine\(getChatAssetVersion\(\)\)/u);
+assert.match(engineSource, /portfolio-chat-worker\.js/u);
+assert.match(engineSource, /searchParams\.set\("v"/u);
 const generatedFiles = await readdir(chatRoot, { recursive: true });
 const generatedJs = await Promise.all(
   generatedFiles
@@ -188,8 +193,9 @@ const generatedJs = await Promise.all(
 );
 const mainGenerated = generatedJs.find((entry) => entry.file === "portfolio-chat.js")?.source ?? "";
 const cssGenerated = await read("static-landing/chat/portfolio-chat.css");
+const workerGenerated = await read("static-landing/chat/portfolio-chat-worker.js");
 const expectedCacheVersion = createHash("sha256")
-  .update(`${mainGenerated}\n${cssGenerated}`)
+  .update(`${mainGenerated}\n${cssGenerated}\n${workerGenerated}`)
   .digest("hex")
   .slice(0, 12);
 assert.equal(cssReference[1], expectedCacheVersion, "Chat references must match generated entry content");

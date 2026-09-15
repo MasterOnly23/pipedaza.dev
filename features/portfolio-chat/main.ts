@@ -45,6 +45,16 @@ function getBrowserGPU(): BrowserGPU | null {
   return (navigator as Navigator & { gpu?: BrowserGPU }).gpu ?? null;
 }
 
+function getChatAssetVersion(): string {
+  const script = document.querySelector<HTMLScriptElement>(
+    'script[src*="/chat/portfolio-chat.js"]',
+  );
+  const version = script
+    ? new URL(script.src, window.location.href).searchParams.get("v") ?? ""
+    : "";
+  return /^[0-9a-f]{12}$/u.test(version) ? version : "";
+}
+
 function setChatMode(nextMode: typeof mode, retryable = false): void {
   mode = nextMode;
   setMode(view, nextMode, retryable);
@@ -133,7 +143,7 @@ async function startLoading(): Promise<void> {
 
     const engineModule = await import("./engine");
     if (cancelRequested || sequence !== loadSequence) return;
-    if (!engine) engine = engineModule.createLocalChatEngine();
+    if (!engine) engine = engineModule.createLocalChatEngine(getChatAssetVersion());
     const current = engine;
     await current.load((progress, text) => {
       if (cancelRequested || sequence !== loadSequence || mode !== "loading") return;

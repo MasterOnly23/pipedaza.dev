@@ -37,7 +37,7 @@ function cleanProgressText(text: string): string {
     .slice(0, 140);
 }
 
-export function createLocalChatEngine(): LocalChatEngine {
+export function createLocalChatEngine(workerVersion = ""): LocalChatEngine {
   let worker: Worker | null = null;
   let engine: WebLLMEngine | null = null;
   let loadPromise: Promise<void> | null = null;
@@ -53,7 +53,11 @@ export function createLocalChatEngine(): LocalChatEngine {
       const webllm = await import("@mlc-ai/web-llm");
       if (disposed) throw new DOMException("Local engine disposed", "AbortError");
 
-      const nextWorker = new Worker(WORKER_URL, { type: "module" });
+      const workerUrl = new URL(WORKER_URL, window.location.origin);
+      if (/^[0-9a-f]{12}$/u.test(workerVersion)) {
+        workerUrl.searchParams.set("v", workerVersion);
+      }
+      const nextWorker = new Worker(workerUrl, { type: "module" });
       worker = nextWorker;
 
       try {
