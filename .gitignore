@@ -46,6 +46,7 @@ next-env.d.ts
 /outputs/
 /work/
 /.playwright-cli/
+/output/
 
 # Local implementation handoffs; keep them outside repository history.
 /docs/local-browser-chatbot/

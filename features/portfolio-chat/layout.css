@@ -1,0 +1,52 @@
+/*
+ * Keep the controls reachable when the viewport is shorter than the full
+ * conversation panel. The quick-question list is the flexible region; the
+ * form and engine controls must never be shrunk out of view.
+ */
+.portfolio-chat-panel {
+  bottom: 1rem;
+  width: min(420px, calc(100vw - 2rem));
+  max-height: min(680px, calc(100dvh - 2rem));
+}
+
+.portfolio-chat-header,
+.portfolio-chat-status,
+.portfolio-chat-form,
+.portfolio-chat-engine-actions {
+  flex-shrink: 0;
+}
+
+.portfolio-chat-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.portfolio-chat-progress,
+.portfolio-chat-quick,
+.portfolio-chat-consent {
+  flex: 0 0 auto;
+}
+
+.portfolio-chat-contact,
+.portfolio-chat-messages {
+  flex: 0 0 auto;
+}
+
+.portfolio-chat-messages {
+  min-height: 0;
+  overflow: visible;
+}
+
+@media (max-width: 760px) {
+  .portfolio-chat-panel {
+    top: max(.5rem, env(safe-area-inset-top));
+    bottom: max(.5rem, env(safe-area-inset-bottom));
+    width: 100%;
+    max-height: none;
+    height: auto;
+  }
+}

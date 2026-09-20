@@ -21,3 +21,12 @@
   .project-info,.project-reversed .project-info{justify-content:flex-start;padding-top:4.8rem;padding-bottom:2rem}
   .project-info h3{margin-top:0}
 }
+
+/* Kustral is private client work: present the product without implying public access. */
+.project-violet::before{background:#9d68ff}
+.project-violet .project-status::before{background:#9d68ff}
+.project-violet .project-visual{background:#604092}
+.project-violet .image-visual::after{background:linear-gradient(135deg,rgba(157,104,255,.22),transparent 45%)}
+.project-private-mark{position:absolute;z-index:2;top:1.25rem;right:1.25rem;padding:.55rem .7rem;border:1px solid rgba(255,255,255,.32);border-radius:999px;background:rgba(11,12,13,.78);color:#eee8fa;font:700 .62rem ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;backdrop-filter:blur(10px)}
+.project-info>.project-access{margin-top:1rem;color:#cbc0e2;font:700 .7rem ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase}
+@media(max-width:430px){.project-private-mark{top:.8rem;right:.8rem;font-size:.56rem}.project-info>.project-access{font-size:.65rem}}
