@@ -229,6 +229,8 @@ const renderSource = await read("features/portfolio-chat/render.ts");
 const chatStyles = await read("features/portfolio-chat/styles.css");
 const mainSource = await read("features/portfolio-chat/main.ts");
 const engineSource = await read("features/portfolio-chat/engine.ts");
+assert.match(engineSource, /rejectPendingLoad/u, "Engine disposal must reject a pending model load");
+assert.match(engineSource, /loadCancellation/u, "Engine loading must race against cancellation");
 assert.deepEqual(
   [...renderSource.matchAll(/data-quick-question="([^"]+)"/gu)].map((match) => match[1]),
   ["¿Qué construye Juan Felipe?", "Cuéntame sobre PartyUp", "¿Qué es ZentraStock?"],
