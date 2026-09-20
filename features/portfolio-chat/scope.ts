@@ -19,6 +19,7 @@ const TOPIC_LABELS: Record<KnowledgeTopic["id"], string> = {
   stack: "stack",
   partyup: "PartyUp",
   zentrastock: "ZentraStock",
+  kustral: "Kustral Finanzas",
   contact: "contacto",
 };
 
@@ -28,6 +29,7 @@ const TOPIC_LABELS_EN: Record<KnowledgeTopic["id"], string> = {
   stack: "stack",
   partyup: "PartyUp",
   zentrastock: "ZentraStock",
+  kustral: "Kustral Finanzas",
   contact: "contact",
 };
 
@@ -238,13 +240,14 @@ export function findQuickResponse(
   return null;
 }
 
-const PROJECT_OVERVIEW_PATTERN = /\b(?:proyecto|proyectos|project|projects|portfolio|portafolio)\b/u;
+const DETERMINISTIC_WORK_PATTERN =
+  /\b(?:proyecto|proyectos|project|projects|portfolio|portafolio|que hace|a que se dedica|que desarrolla|what does(?: he| juan felipe)? do|what does juan felipe build|what does he build|what does he work on)\b/u;
 
 export function findDeterministicResponse(
   question: string,
 ): { answer: string; links: AllowedLink[] } | null {
   const normalized = normalizeQuestion(question);
-  if (!PROJECT_OVERVIEW_PATTERN.test(normalized)) return null;
+  if (!DETERMINISTIC_WORK_PATTERN.test(normalized)) return null;
 
   const topics = selectTopics(question);
   if (!topics.some((topic) => topic.id === "work")) return null;

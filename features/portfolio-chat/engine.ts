@@ -1,6 +1,6 @@
 import type { LocalChatEngine, PromptMessage } from "./types";
+import { MODEL_ID } from "./model-cache";
 
-export const MODEL_ID = "Qwen2.5-0.5B-Instruct-q4f16_1-MLC";
 const WORKER_URL = "/chat/portfolio-chat-worker.js";
 
 type ProgressReport = {

@@ -1,5 +1,6 @@
 import "./styles.css";
 import "./layout.css";
+import { hasLocalChatModelInCache } from "./model-cache";
 import { buildPromptMessages } from "./prompt";
 import {
   FALLBACK_ANSWER,
@@ -112,7 +113,7 @@ async function requestAdapter(): Promise<unknown | null> {
 }
 
 async function askForConsent(): Promise<void> {
-  if (mode !== "idle" && mode !== "error") return;
+  if ((mode !== "idle" && mode !== "error") || startLoadingInFlight) return;
 
   view.activate.disabled = true;
   setStatus(view, "Comprobando si este navegador puede ejecutar IA local…");
@@ -128,13 +129,30 @@ async function askForConsent(): Promise<void> {
   view.consentAccept.focus();
 }
 
-async function startLoading(): Promise<void> {
-  if (mode !== "consent" || startLoadingInFlight) return;
+async function startLoading(autoActivate = false): Promise<void> {
+  const expectedMode = autoActivate ? "idle" : "consent";
+  if (mode !== expectedMode || startLoadingInFlight) return;
   startLoadingInFlight = true;
-  view.consentAccept.disabled = true;
+  view.consentAccept.disabled = !autoActivate;
+  view.activate.disabled = autoActivate;
   const sequence = ++loadSequence;
   cancelRequested = false;
   try {
+    let engineModule: typeof import("./engine") | null = null;
+    if (autoActivate) {
+      setStatus(view, "Comprobando si la IA local ya está descargada…");
+      try {
+        if (!(await hasLocalChatModelInCache())) {
+          setIdle();
+          return;
+        }
+      } catch {
+        setIdle("No pude comprobar la IA local. Puedes activarla manualmente.");
+        return;
+      }
+      setStatus(view, "IA local encontrada. Activándola…");
+    }
+
     const adapter = await requestAdapter();
     if (!adapter) {
       setUnsupported();
@@ -145,7 +163,7 @@ async function startLoading(): Promise<void> {
     setStatus(view, "Preparando la IA local…");
     resetProgress(view);
 
-    const engineModule = await import("./engine");
+    engineModule ??= await import("./engine");
     if (cancelRequested || sequence !== loadSequence) return;
     if (!engine) engine = engineModule.createLocalChatEngine(getChatAssetVersion());
     const current = engine;
@@ -172,6 +190,7 @@ async function startLoading(): Promise<void> {
   } finally {
     startLoadingInFlight = false;
     view.consentAccept.disabled = false;
+    view.activate.disabled = false;
   }
 }
 
@@ -333,6 +352,7 @@ function openChat(): void {
   opener = document.activeElement instanceof HTMLElement ? document.activeElement : view.launcher;
   setOpen(view, true);
   view.close.focus();
+  void startLoading(true);
 }
 
 view.launcher.addEventListener("click", openChat);

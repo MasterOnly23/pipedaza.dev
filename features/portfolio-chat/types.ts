@@ -4,6 +4,7 @@ export type TopicId =
   | "stack"
   | "partyup"
   | "zentrastock"
+  | "kustral"
   | "contact";
 
 export type AllowedLink = {

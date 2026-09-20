@@ -91,15 +91,22 @@ const sourceText = sourceFiles.join("\n");
 assert.doesNotMatch(sourceText, /\blocalStorage\b|\bsessionStorage\b|\bindexedDB\b|document\.cookie|sendBeacon|\bfetch\s*\(/u);
 assert.doesNotMatch(sourceText, /http:\/\//u, "Feature source contains an http:// production URL");
 assert.match(await read("features/portfolio-chat/webllm.worker.ts"), /WebWorkerMLCEngineHandler/u);
-assert.match(await read("features/portfolio-chat/engine.ts"), /context_window_size:\s*1024/u);
+const engineSource = await read("features/portfolio-chat/engine.ts");
+const modelCacheSource = await read("features/portfolio-chat/model-cache.ts");
+assert.match(engineSource, /context_window_size:\s*1024/u);
+assert.match(modelCacheSource, /MODEL_CACHE_SCOPE\s*=\s*"webllm\/model"/u);
+assert.match(modelCacheSource, /tensor-cache\.json/u);
+assert.doesNotMatch(modelCacheSource, /@mlc-ai\/web-llm/u, "Cache detection must not load the WebLLM runtime");
 
 const landingBundle = await read("static-landing/app-20260915.js");
 assert.doesNotMatch(landingBundle, /web-llm|Qwen2\.5|CreateWebWorkerMLCEngine/iu);
 
 const knowledgeModule = await loadTypeScriptModule(path.join(featureRoot, "knowledge.ts"));
+const ownerContextModule = await loadTypeScriptModule(path.join(featureRoot, "owner-context.ts"));
 const scopeModule = await loadTypeScriptModule(path.join(featureRoot, "scope.ts"));
 const promptModule = await loadTypeScriptModule(path.join(featureRoot, "prompt.ts"));
 const { knowledge, allowedLinks } = knowledgeModule;
+const { ownerContext } = ownerContextModule;
 const { buildPromptMessages } = promptModule;
 const {
   findQuickResponse,
@@ -116,15 +123,41 @@ const {
 const ids = (question) => selectTopics(question).map((topic) => topic.id);
 assert.deepEqual(
   knowledge.map((topic) => topic.id),
-  ["profile", "work", "stack", "partyup", "zentrastock", "contact"],
-  "Knowledge must contain only the six documented public topics",
+  ["profile", "work", "stack", "partyup", "zentrastock", "kustral", "contact"],
+  "Knowledge must contain only the seven documented public topics",
 );
+assert.deepEqual(
+  Object.keys(ownerContext),
+  ["profile", "work", "stack", "partyup", "zentrastock", "kustral", "contact"],
+  "Owner context must expose one editable section per public topic",
+);
+for (const [topicId, context] of Object.entries(ownerContext)) {
+  assert.deepEqual(Object.keys(context).sort(), ["facts", "factsEn", "keywords"]);
+  assert.equal(Array.isArray(context.keywords), true, `${topicId} context keywords must be an array`);
+  assert.equal(Array.isArray(context.facts), true, `${topicId} context facts must be an array`);
+  assert.equal(Array.isArray(context.factsEn), true, `${topicId} English context facts must be an array`);
+}
+
+assert.equal(
+  await exists("features/portfolio-chat/owner-context-guide.md"),
+  true,
+  "The editable owner context guide must be present",
+);
+const ownerContextGuide = await read("features/portfolio-chat/owner-context-guide.md");
+assert.match(ownerContextGuide, /owner-context\.ts/u);
+assert.match(ownerContextGuide, /keywords/u);
+assert.match(ownerContextGuide, /factsEn/u);
 assert.deepEqual(ids("¿Qué es PartyUp?"), ["partyup"]);
+assert.deepEqual(ids("¿Qué es Kustral Finanzas?"), ["kustral"]);
 assert.deepEqual(ids("Tell me about Juan Felipe"), ["profile"]);
 assert.deepEqual(ids("Juan Felipe Daza"), ["profile"]);
 assert.deepEqual(ids("What does Juan Felipe build?"), ["work"]);
 assert.deepEqual(ids("What kind of products does he develop?"), ["work"]);
 assert.deepEqual(ids("What does Juan Felipe do?"), ["work"]);
+assert.deepEqual(ids("¿Qué hace Juan Felipe?"), ["work"]);
+assert.deepEqual(ids("¿A qué se dedica Juan Felipe?"), ["work"]);
+assert.deepEqual(ids("¿Qué desarrolla Juan Felipe?"), ["work"]);
+assert.deepEqual(ids("¿Cuál es su enfoque?"), ["profile"]);
 assert.deepEqual(ids("¿Cuáles son los proyectos de Juan Felipe?"), ["work"]);
 assert.deepEqual(ids("What are his projects?"), ["work"]);
 assert.deepEqual(ids("¿Qué tecnologías utiliza?"), ["stack"]);
@@ -164,11 +197,18 @@ assert.equal(findQuickResponse("Cuéntame sobre PartyUp")?.answer.includes("Part
 assert.equal(findQuickResponse("Cuéntame sobre PartyUp")?.links[0].url, allowedLinks.get("partyup"));
 assert.match(findDeterministicResponse("¿Cuáles son los proyectos de Juan Felipe?")?.answer ?? "", /ZentraStock/u);
 assert.match(findDeterministicResponse("¿Cuáles son los proyectos de Juan Felipe?")?.answer ?? "", /PartyUp/u);
+assert.match(
+  findDeterministicResponse("¿Cuáles son los proyectos de Juan Felipe?")?.answer ?? "",
+  /Kustral Finanzas/iu,
+);
 assert.equal(
   findDeterministicResponse("¿Cuáles son los proyectos de Juan Felipe?")?.links.length,
   2,
 );
-assert.equal(findQuickResponse("¿Qué es Kustral Finanzas?"), null);
+assert.match(findQuickResponse("¿Qué es Kustral Finanzas?")?.answer ?? "", /Kustral Finanzas/u);
+assert.equal(findQuickResponse("¿Qué es Kustral Finanzas?")?.links.length, 0);
+assert.match(findDeterministicResponse("¿Qué hace Juan Felipe?")?.answer ?? "", /aplicaciones web/u);
+assert.equal(findDeterministicResponse("¿Qué hace Juan Felipe?")?.links.length, 2);
 assert.equal(postValidateAnswer("<b>PartyUp</b>", injectedTopics), "<b>PartyUp</b>");
 assert.doesNotMatch(postValidateAnswer("Visita https://inventado.example/", injectedTopics), /https?:\/\//iu);
 assert.equal(postValidateAnswer("Juan Felipe tiene 20 años de experiencia.", injectedTopics), "No tengo información pública suficiente sobre eso.");
@@ -212,6 +252,12 @@ const englishPrompt = buildPromptMessages("Tell me about Juan Felipe", selectTop
 assert.match(englishPrompt[0].content, /You are the brief assistant/u);
 assert.match(englishPrompt[0].content, /His public work focuses/u);
 assert.match(englishPrompt[0].content, /FACTS:/u);
+const ownerContextPrompt = buildPromptMessages(
+  "¿Cuál es su enfoque?",
+  selectTopics("¿Cuál es su enfoque?"),
+  [],
+);
+assert.match(ownerContextPrompt[0].content, /entender el problema, construir el sistema/u);
 
 for (const [key, url] of allowedLinks) {
   assert.equal(/^https:\/\//u.test(url) || /^mailto:/u.test(url), true, `Unsafe allowlisted URL: ${key}`);
@@ -234,17 +280,18 @@ const knowledgeText = JSON.stringify(knowledge);
 for (const pattern of prohibitedKnowledgePatterns) {
   assert.doesNotMatch(knowledgeText, pattern, `Knowledge contains a prohibited field: ${pattern}`);
 }
+assert.match(knowledgeText, /Kustral Finanzas/iu, "Kustral's approved public summary must remain available");
+assert.equal(knowledge.find((topic) => topic.id === "kustral")?.links?.length ?? 0, 0);
 const renderSource = await read("features/portfolio-chat/render.ts");
 const layoutStyles = await read("features/portfolio-chat/layout.css");
 const chatStyles = await read("features/portfolio-chat/styles.css");
 const mainSource = await read("features/portfolio-chat/main.ts");
-const engineSource = await read("features/portfolio-chat/engine.ts");
 assert.match(engineSource, /rejectPendingLoad/u, "Engine disposal must reject a pending model load");
 assert.match(engineSource, /loadCancellation/u, "Engine loading must race against cancellation");
 assert.deepEqual(
   [...renderSource.matchAll(/data-quick-question="([^"]+)"/gu)].map((match) => match[1]),
-  ["¿Qué construye Juan Felipe?", "Cuéntame sobre PartyUp", "¿Qué es ZentraStock?"],
-  "The UI must expose exactly the three documented quick questions",
+  ["¿Qué construye Juan Felipe?", "Cuéntame sobre PartyUp", "¿Qué es ZentraStock?", "¿Qué es Kustral Finanzas?"],
+  "The UI must expose exactly the four documented quick questions",
 );
 assert.match(renderSource, /role="dialog" aria-modal="false"/u);
 assert.match(renderSource, /aria-live="polite"/u);
@@ -255,6 +302,8 @@ assert.match(renderSource, /allowlistedLink\("email"/u);
 assert.match(renderSource, /<div class="portfolio-chat-body">/u);
 assert.match(renderSource, /<form class="portfolio-chat-form">/u);
 assert.match(renderSource, /scrollConversationToEnd\(view\)/u);
+assert.match(mainSource, /hasLocalChatModelInCache/u);
+assert.match(mainSource, /startLoading\(true\)/u);
 assert.match(renderSource, /body\.textContent\s*=\s*text/u);
 assert.doesNotMatch(renderSource, /body\.innerHTML\s*=/u, "Variable chat output must not use innerHTML");
 assert.match(layoutStyles, /\.portfolio-chat-body\s*\{/u);

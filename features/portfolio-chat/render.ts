@@ -90,6 +90,7 @@ export function createChatView(): ChatView {
             <button type="button" data-quick-question="¿Qué construye Juan Felipe?">¿Qué construye Juan Felipe?</button>
             <button type="button" data-quick-question="Cuéntame sobre PartyUp">Cuéntame sobre PartyUp</button>
             <button type="button" data-quick-question="¿Qué es ZentraStock?">¿Qué es ZentraStock?</button>
+            <button type="button" data-quick-question="¿Qué es Kustral Finanzas?">¿Qué es Kustral Finanzas?</button>
           </div>
         </div>
         <div class="portfolio-chat-consent" hidden>
