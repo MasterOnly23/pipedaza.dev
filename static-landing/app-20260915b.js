@@ -1,4 +1,4 @@
-import { projects } from "./projects-20260915.js";
+import { projects } from "./projects-20260915b.js";
 
 const projectMarker = (project) => project.private
   ? `<span class="project-private-mark">Private / client work</span>`
