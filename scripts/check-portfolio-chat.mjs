@@ -103,6 +103,7 @@ const { knowledge, allowedLinks } = knowledgeModule;
 const { buildPromptMessages } = promptModule;
 const {
   findQuickResponse,
+  findDeterministicResponse,
   detectQuestionLanguage,
   isInjectionLike,
   normalizeQuestion,
@@ -124,6 +125,8 @@ assert.deepEqual(ids("Juan Felipe Daza"), ["profile"]);
 assert.deepEqual(ids("What does Juan Felipe build?"), ["work"]);
 assert.deepEqual(ids("What kind of products does he develop?"), ["work"]);
 assert.deepEqual(ids("What does Juan Felipe do?"), ["work"]);
+assert.deepEqual(ids("¿Cuáles son los proyectos de Juan Felipe?"), ["work"]);
+assert.deepEqual(ids("What are his projects?"), ["work"]);
 assert.deepEqual(ids("¿Qué tecnologías utiliza?"), ["stack"]);
 assert.deepEqual(ids("¿Cómo contacto a Juan Felipe?"), ["contact"]);
 assert.deepEqual(ids("Compare PartyUp and ZentraStock"), ["partyup", "zentrastock"]);
@@ -159,6 +162,12 @@ assert.doesNotMatch(
 );
 assert.equal(findQuickResponse("Cuéntame sobre PartyUp")?.answer.includes("PartyUp"), true);
 assert.equal(findQuickResponse("Cuéntame sobre PartyUp")?.links[0].url, allowedLinks.get("partyup"));
+assert.match(findDeterministicResponse("¿Cuáles son los proyectos de Juan Felipe?")?.answer ?? "", /ZentraStock/u);
+assert.match(findDeterministicResponse("¿Cuáles son los proyectos de Juan Felipe?")?.answer ?? "", /PartyUp/u);
+assert.equal(
+  findDeterministicResponse("¿Cuáles son los proyectos de Juan Felipe?")?.links.length,
+  2,
+);
 assert.equal(findQuickResponse("¿Qué es Kustral Finanzas?"), null);
 assert.equal(postValidateAnswer("<b>PartyUp</b>", injectedTopics), "<b>PartyUp</b>");
 assert.doesNotMatch(postValidateAnswer("Visita https://inventado.example/", injectedTopics), /https?:\/\//iu);
@@ -226,6 +235,7 @@ for (const pattern of prohibitedKnowledgePatterns) {
   assert.doesNotMatch(knowledgeText, pattern, `Knowledge contains a prohibited field: ${pattern}`);
 }
 const renderSource = await read("features/portfolio-chat/render.ts");
+const layoutStyles = await read("features/portfolio-chat/layout.css");
 const chatStyles = await read("features/portfolio-chat/styles.css");
 const mainSource = await read("features/portfolio-chat/main.ts");
 const engineSource = await read("features/portfolio-chat/engine.ts");
@@ -242,8 +252,15 @@ assert.match(renderSource, /<progress[^>]*max="1"/u);
 assert.match(renderSource, /portfolio-chat-contact-links/u);
 assert.match(renderSource, /allowlistedLink\("github"/u);
 assert.match(renderSource, /allowlistedLink\("email"/u);
+assert.match(renderSource, /<div class="portfolio-chat-body">/u);
+assert.match(renderSource, /<form class="portfolio-chat-form">/u);
+assert.match(renderSource, /scrollConversationToEnd\(view\)/u);
 assert.match(renderSource, /body\.textContent\s*=\s*text/u);
 assert.doesNotMatch(renderSource, /body\.innerHTML\s*=/u, "Variable chat output must not use innerHTML");
+assert.match(layoutStyles, /\.portfolio-chat-body\s*\{/u);
+assert.match(layoutStyles, /overflow-y:\s*auto/u);
+assert.match(layoutStyles, /\.portfolio-chat-form/u);
+assert.match(layoutStyles, /width: min\(420px/u);
 assert.match(chatStyles, /#portfolio-chat-root\[data-open="true"\]\s+\.portfolio-chat-launcher/u);
 assert.match(
   chatStyles,

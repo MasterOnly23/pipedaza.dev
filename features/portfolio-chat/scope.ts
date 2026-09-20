@@ -51,7 +51,9 @@ const ENGLISH_LANGUAGE_MARKERS = [
   "is",
   "are",
   "products",
+  "projects",
   "systems",
+  "which",
 ];
 
 const SPANISH_LANGUAGE_MARKERS = [
@@ -83,7 +85,9 @@ const SPANISH_LANGUAGE_MARKERS = [
   "o",
   "trabajo",
   "productos",
+  "proyectos",
   "sistemas",
+  "cuales",
 ];
 
 export function normalizeQuestion(input: string): string {
@@ -232,6 +236,33 @@ export function findQuickResponse(
     }
   }
   return null;
+}
+
+const PROJECT_OVERVIEW_PATTERN = /\b(?:proyecto|proyectos|project|projects|portfolio|portafolio)\b/u;
+
+export function findDeterministicResponse(
+  question: string,
+): { answer: string; links: AllowedLink[] } | null {
+  const normalized = normalizeQuestion(question);
+  if (!PROJECT_OVERVIEW_PATTERN.test(normalized)) return null;
+
+  const topics = selectTopics(question);
+  if (!topics.some((topic) => topic.id === "work")) return null;
+
+  const workTopic = knowledge.find((topic) => topic.id === "work");
+  if (!workTopic) return null;
+
+  const language = detectQuestionLanguage(question);
+  const projectTopics = knowledge.filter(
+    (topic) => topic.id === "partyup" || topic.id === "zentrastock",
+  );
+  return {
+    answer:
+      language === "en"
+        ? workTopic.deterministicAnswerEn ?? workTopic.factsEn?.join(" ") ?? ""
+        : workTopic.deterministicAnswer ?? workTopic.facts.join(" "),
+    links: linksForTopics(projectTopics),
+  };
 }
 
 export function linksForTopics(topics: KnowledgeTopic[]): AllowedLink[] {

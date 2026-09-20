@@ -29,6 +29,7 @@ export type ChatView = {
   consent: HTMLDivElement;
   consentAccept: HTMLButtonElement;
   consentCancel: HTMLButtonElement;
+  body: HTMLDivElement;
   messages: HTMLDivElement;
   form: HTMLFormElement;
   input: HTMLTextAreaElement;
@@ -77,25 +78,27 @@ export function createChatView(): ChatView {
         <span class="portfolio-chat-badge">IA local · se ejecuta en tu dispositivo</span>
       </header>
       <p class="portfolio-chat-status" role="status" aria-live="polite">Las preguntas rápidas funcionan sin descargar el modelo.</p>
-      <div class="portfolio-chat-progress" hidden>
-        <div class="portfolio-chat-progress-head"><span>Cargando modelo local</span><button class="portfolio-chat-cancel" type="button">Cancelar</button></div>
-        <progress max="1" value="0" aria-label="Progreso de carga del modelo"></progress>
-        <span class="portfolio-chat-progress-text"></span>
-      </div>
-      <div class="portfolio-chat-quick">
-        <div class="portfolio-chat-quick-heading"><span>Preguntas rápidas</span><span>Respuesta rápida</span></div>
-        <div class="portfolio-chat-quick-actions">
-          <button type="button" data-quick-question="¿Qué construye Juan Felipe?">¿Qué construye Juan Felipe?</button>
-          <button type="button" data-quick-question="Cuéntame sobre PartyUp">Cuéntame sobre PartyUp</button>
-          <button type="button" data-quick-question="¿Qué es ZentraStock?">¿Qué es ZentraStock?</button>
+      <div class="portfolio-chat-body">
+        <div class="portfolio-chat-progress" hidden>
+          <div class="portfolio-chat-progress-head"><span>Cargando modelo local</span><button class="portfolio-chat-cancel" type="button">Cancelar</button></div>
+          <progress max="1" value="0" aria-label="Progreso de carga del modelo"></progress>
+          <span class="portfolio-chat-progress-text"></span>
         </div>
+        <div class="portfolio-chat-quick">
+          <div class="portfolio-chat-quick-heading"><span>Preguntas rápidas</span><span>Respuesta rápida</span></div>
+          <div class="portfolio-chat-quick-actions">
+            <button type="button" data-quick-question="¿Qué construye Juan Felipe?">¿Qué construye Juan Felipe?</button>
+            <button type="button" data-quick-question="Cuéntame sobre PartyUp">Cuéntame sobre PartyUp</button>
+            <button type="button" data-quick-question="¿Qué es ZentraStock?">¿Qué es ZentraStock?</button>
+          </div>
+        </div>
+        <div class="portfolio-chat-consent" hidden>
+          <p class="portfolio-chat-consent-title">Activa respuestas libres</p>
+          <p>El modelo se descarga una vez y queda en la caché de este navegador. Puede usar cientos de MB. La pregunta y la respuesta se procesan en tu dispositivo.</p>
+          <div class="portfolio-chat-consent-actions"><button class="portfolio-chat-consent-accept" type="button">Aceptar y descargar</button><button class="portfolio-chat-consent-cancel" type="button">Ahora no</button></div>
+        </div>
+        <div class="portfolio-chat-messages" aria-live="polite" aria-atomic="false"></div>
       </div>
-      <div class="portfolio-chat-consent" hidden>
-        <p class="portfolio-chat-consent-title">Activa respuestas libres</p>
-        <p>El modelo se descarga una vez y queda en la caché de este navegador. Puede usar cientos de MB. La pregunta y la respuesta se procesan en tu dispositivo.</p>
-        <div class="portfolio-chat-consent-actions"><button class="portfolio-chat-consent-accept" type="button">Aceptar y descargar</button><button class="portfolio-chat-consent-cancel" type="button">Ahora no</button></div>
-      </div>
-      <div class="portfolio-chat-messages" aria-live="polite" aria-atomic="false"></div>
       <form class="portfolio-chat-form">
         <label for="portfolio-chat-input"><span>Pregunta libre</span><span class="portfolio-chat-char-count">0 / 280</span></label>
         <textarea id="portfolio-chat-input" maxlength="280" rows="2" placeholder="Activa la IA local para escribir una pregunta" disabled></textarea>
@@ -136,6 +139,7 @@ export function createChatView(): ChatView {
     consent: required(root, ".portfolio-chat-consent"),
     consentAccept: required(root, ".portfolio-chat-consent-accept"),
     consentCancel: required(root, ".portfolio-chat-consent-cancel"),
+    body: required(root, ".portfolio-chat-body"),
     messages: required(root, ".portfolio-chat-messages"),
     form: required(root, "form"),
     input: required(root, "#portfolio-chat-input"),
@@ -236,11 +240,16 @@ export function appendMessage(
   root.appendChild(body);
   appendLinks(root, links);
   view.messages.appendChild(root);
-  view.messages.scrollTop = view.messages.scrollHeight;
+  scrollConversationToEnd(view);
   return { root, body };
 }
 
+function scrollConversationToEnd(view: ChatView): void {
+  view.body.scrollTop = view.body.scrollHeight;
+}
+
 export function updateMessage(
+  view: ChatView,
   message: RenderedMessage,
   text: string,
   links: AllowedLink[] = [],
@@ -248,6 +257,7 @@ export function updateMessage(
   message.body.textContent = text;
   message.root.querySelector(".portfolio-chat-message-links")?.remove();
   appendLinks(message.root, links);
+  scrollConversationToEnd(view);
 }
 
 export function clearMessages(view: ChatView): void {

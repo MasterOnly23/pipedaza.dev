@@ -1,9 +1,11 @@
 import "./styles.css";
+import "./layout.css";
 import { buildPromptMessages } from "./prompt";
 import {
   FALLBACK_ANSWER,
   FALLBACK_ANSWER_EN,
   detectQuestionLanguage,
+  findDeterministicResponse,
   findQuickResponse,
   isInjectionLike,
   linksForTopics,
@@ -191,17 +193,18 @@ function addQuickResponse(question: string): void {
 }
 
 function scheduleTextUpdate(
+  view: Parameters<typeof updateMessage>[0],
   message: ReturnType<typeof appendMessage>,
   getText: () => string,
 ): Promise<void> {
   if (typeof requestAnimationFrame !== "function") {
-    updateMessage(message, getText());
+    updateMessage(view, message, getText());
     return Promise.resolve();
   }
 
   return new Promise((resolve) => {
     requestAnimationFrame(() => {
-      updateMessage(message, getText());
+      updateMessage(view, message, getText());
       resolve();
     });
   });
@@ -254,6 +257,13 @@ async function submitQuestion(): Promise<void> {
     return;
   }
 
+  const deterministicResponse = findDeterministicResponse(validation.value);
+  if (deterministicResponse) {
+    appendMessage(view, "assistant", deterministicResponse.answer, deterministicResponse.links);
+    setStatus(view, "Respuesta verificada con la información del portfolio.");
+    return;
+  }
+
   if (!topics.length) {
     appendMessage(view, "assistant", language === "en" ? FALLBACK_ANSWER_EN : FALLBACK_ANSWER);
     setStatus(view, "Pregunta fuera del alcance público del asistente.");
@@ -279,12 +289,12 @@ async function submitQuestion(): Promise<void> {
     for await (const chunk of engine.answer(promptMessages)) {
       if (sequence !== generationSequence) return;
       generated += chunk;
-      await scheduleTextUpdate(responseMessage, () => generated || "Generando respuesta local…");
+      await scheduleTextUpdate(view, responseMessage, () => generated || "Generando respuesta local…");
     }
     if (sequence !== generationSequence) return;
 
     const answer = postValidateAnswer(generated, topics, language);
-    updateMessage(responseMessage, answer, linksForTopics(topics));
+    updateMessage(view, responseMessage, answer, linksForTopics(topics));
     const nextHistory: ChatHistoryEntry[] = [
       ...history,
       { role: "user", content: safeQuestion },
@@ -302,6 +312,7 @@ async function submitQuestion(): Promise<void> {
       return;
     }
     updateMessage(
+      view,
       responseMessage,
       "No pude generar una respuesta local ahora. Las preguntas rápidas siguen disponibles.",
     );
