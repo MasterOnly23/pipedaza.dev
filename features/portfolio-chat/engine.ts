@@ -41,6 +41,7 @@ export function createLocalChatEngine(workerVersion = ""): LocalChatEngine {
   let worker: Worker | null = null;
   let engine: WebLLMEngine | null = null;
   let loadPromise: Promise<void> | null = null;
+  let rejectPendingLoad: ((reason?: unknown) => void) | null = null;
   let disposed = false;
   let generating = false;
 
@@ -49,8 +50,11 @@ export function createLocalChatEngine(workerVersion = ""): LocalChatEngine {
     if (loadPromise) return loadPromise;
 
     disposed = false;
+    const loadCancellation = new Promise<never>((_, reject) => {
+      rejectPendingLoad = reject;
+    });
     loadPromise = (async () => {
-      const webllm = await import("@mlc-ai/web-llm");
+      const webllm = await Promise.race([import("@mlc-ai/web-llm"), loadCancellation]);
       if (disposed) throw new DOMException("Local engine disposed", "AbortError");
 
       const workerUrl = new URL(WORKER_URL, window.location.origin);
@@ -61,16 +65,19 @@ export function createLocalChatEngine(workerVersion = ""): LocalChatEngine {
       worker = nextWorker;
 
       try {
-        const nextEngine = await webllm.CreateWebWorkerMLCEngine(
-          nextWorker,
-          MODEL_ID,
-          {
-            initProgressCallback: (report: ProgressReport) => {
-              onProgress(clampProgress(report.progress), cleanProgressText(report.text));
+        const nextEngine = await Promise.race([
+          webllm.CreateWebWorkerMLCEngine(
+            nextWorker,
+            MODEL_ID,
+            {
+              initProgressCallback: (report: ProgressReport) => {
+                onProgress(clampProgress(report.progress), cleanProgressText(report.text));
+              },
             },
-          },
-          { context_window_size: 1024 },
-        );
+            { context_window_size: 1024 },
+          ),
+          loadCancellation,
+        ]);
 
         if (disposed) {
           await nextEngine.unload();
@@ -82,7 +89,9 @@ export function createLocalChatEngine(workerVersion = ""): LocalChatEngine {
         if (worker === nextWorker) worker = null;
         throw error;
       }
-    })();
+    })().finally(() => {
+      rejectPendingLoad = null;
+    });
 
     return loadPromise.finally(() => {
       loadPromise = null;
@@ -122,6 +131,10 @@ export function createLocalChatEngine(workerVersion = ""): LocalChatEngine {
 
   const dispose = async (): Promise<void> => {
     disposed = true;
+    if (rejectPendingLoad) {
+      rejectPendingLoad(new DOMException("Local engine disposed", "AbortError"));
+      rejectPendingLoad = null;
+    }
     if (engine) {
       try {
         if (generating) engine.interruptGenerate();
